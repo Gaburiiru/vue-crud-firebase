@@ -1,6 +1,6 @@
 import Vue from "vue";
 import Vuex from "vuex";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import router from "../router/index";
 
 Vue.use(Vuex);
@@ -9,8 +9,9 @@ export default new Vuex.Store({
   state: {
     tareas: [],
     tarea: { nombre: "", id: "" },
+    usuario: null,
+    error: null,
   },
-  getters: {},
   mutations: {
     setTareas(state, payload) {
       state.tareas = payload;
@@ -18,14 +19,20 @@ export default new Vuex.Store({
     setTarea(state, payload) {
       state.tarea = payload;
     },
-    setEliminarTarea(state, payload){
-      state.tareas = state.tareas.filter(item=> item.id !== payload);
-    }
+    setEliminarTarea(state, payload) {
+      state.tareas = state.tareas.filter((item) => item.id !== payload);
+    },
+    setUsuario(state, payload) {
+      state.usuario = payload;
+    },
+    setError(state, payload) {
+      state.error = payload;
+    },
   },
   actions: {
-    getTareas({ commit }) {
+    getTareas({ commit, state }) {
       const tareas = [];
-      db.collection("tareas")
+      db.collection(state.usuario.email)
         .get()
         .then((res) => {
           res.forEach((doc) => {
@@ -38,8 +45,8 @@ export default new Vuex.Store({
           commit("setTareas", tareas);
         });
     },
-    getTarea({ commit }, idTarea) {
-      db.collection("tareas")
+    getTarea({ commit, state }, idTarea) {
+      db.collection(state.usuario.email)
         .doc(idTarea)
         .get()
         .then((doc) => {
@@ -50,8 +57,8 @@ export default new Vuex.Store({
           commit("setTarea", tarea);
         });
     },
-    editarTarea({ commit }, tarea) {
-      db.collection("tareas")
+    editarTarea({ commit, state }, tarea) {
+      db.collection(state.usuario.email)
         .doc(tarea.id)
         .update({ nombre: tarea.nombre })
         .then(() => {
@@ -59,8 +66,8 @@ export default new Vuex.Store({
           router.push("/");
         });
     },
-    agregarTarea({ commit }, nombreTarea) {
-      db.collection("tareas")
+    agregarTarea({ commit, state }, nombreTarea) {
+      db.collection(state.usuario.email)
         .add({
           nombre: nombreTarea,
         })
@@ -69,8 +76,8 @@ export default new Vuex.Store({
           router.push("/");
         });
     },
-    eliminarTarea({ commit, dispatch }, idTarea) {
-      db.collection("tareas")
+    eliminarTarea({ commit, dispatch, state }, idTarea) {
+      db.collection(state.usuario.email)
         .doc(idTarea)
         .delete()
         .then(() => {
@@ -80,6 +87,59 @@ export default new Vuex.Store({
           dispatch("getTareas");*/
           commit("setEliminarTarea", idTarea);
         });
+    },
+    crearUsuario({ commit }, usuario) {
+      auth
+        .createUserWithEmailAndPassword(usuario.email, usuario.password)
+        .then((res) => {
+          // console.log(res);
+          const usuarioCreado = {
+            email: res.user.email,
+            uid: res.user.uid,
+          };
+
+          db.collection(res.user.email).then(router.push("/"), (doc) => {
+            commit("setUsuario", usuarioCreado);
+          });
+        })
+        .catch((error) => {
+          // console.log(error);
+          commit("setError", error);
+        });
+    },
+    ingresoUsuario({ commit }, usuario) {
+      auth
+        .signInWithEmailAndPassword(usuario.email, usuario.password)
+        .then((res) => {
+          //console.log(res);
+          const usuarioLogeado = {
+            email: res.user.email,
+            uid: res.user.uid,
+          };
+          commit("setUsuario", usuarioLogeado);
+          router.push("/");
+        })
+        .catch((error) => {
+          //console.log(error);
+          commit("setError", error);
+        });
+    },
+    cerrarSesion({ commit }) {
+      auth.signOut().then(() => {
+        router.push("/acceso");
+      });
+    },
+    detectarUsuario({ commit }, usuario) {
+      commit("setUsuario", usuario);
+    },
+  },
+  getters: {
+    existeUsuario(state) {
+      if (state.usuario === null) {
+        return false;
+      } else {
+        return true;
+      }
     },
   },
   modules: {},

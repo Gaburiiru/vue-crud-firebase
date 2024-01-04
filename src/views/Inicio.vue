@@ -1,14 +1,14 @@
 <template>
   <div>
-    <h1>Lista de tareas</h1>
+    <h1>Ruta protegida</h1>
+    <p>{{ usuario.email }}</p>
     <router-link to="/agregar">
       <button class="btn btn-primary btn-lg font-monospace">Agregar</button>
     </router-link>
 
     <ul class="list-group mt-5">
-      <li v-for="(item, index) in tareas" :key="index" class="list-group-item">
-        {{ item.nombre }} - {{ item.id }}
-        <div class="float-end">
+      <li v-for="(item, index) in tareas" :key="index" class="list-group-item fs-4">
+        {{ item.nombre }} - {{ item.id }}        <div class="float-end">
           <router-link
             :to="{ name: 'editar', params: { id: item.id } }"
             class="btn btn-warning btn-sm m-2"
@@ -36,7 +36,7 @@ export default {
     ...mapActions(["getTareas", "eliminarTarea"]),
   },
   computed: {
-    ...mapState(["tareas"]),
+    ...mapState(["tareas","usuario"]),
   },
 };
 </script>
