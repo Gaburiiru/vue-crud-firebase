@@ -11,6 +11,8 @@ export default new Vuex.Store({
     tarea: { nombre: "", id: "" },
     usuario: null,
     error: null,
+    carga: false,
+    texto: "",
   },
   mutations: {
     setTareas(state, payload) {
@@ -28,9 +30,18 @@ export default new Vuex.Store({
     setError(state, payload) {
       state.error = payload;
     },
+    cargarFirebase(state, payload) {
+      state.carga = payload;
+    },
   },
   actions: {
+    buscador({ commit, state }, payload) {
+      // console.log(payload);
+      state.texto = payload.toLowerCase();
+    },
     getTareas({ commit, state }) {
+      commit("cargarFirebase", true);
+
       const tareas = [];
       db.collection(state.usuario.email)
         .get()
@@ -42,8 +53,12 @@ export default new Vuex.Store({
             tarea.id = doc.id;
             tareas.push(tarea);
           });
-          commit("setTareas", tareas);
+          setTimeout(() => {
+            commit("cargarFirebase", false);
+          }, 1000);
         });
+
+      commit("setTareas", tareas);
     },
     getTarea({ commit, state }, idTarea) {
       db.collection(state.usuario.email)
@@ -67,6 +82,7 @@ export default new Vuex.Store({
         });
     },
     agregarTarea({ commit, state }, nombreTarea) {
+      commit("cargarFirebase", true);
       db.collection(state.usuario.email)
         .add({
           nombre: nombreTarea,
@@ -74,6 +90,7 @@ export default new Vuex.Store({
         .then((doc) => {
           // console.log(doc.id);
           router.push("/");
+          commit("cargarFirebase", false);
         });
     },
     eliminarTarea({ commit, dispatch, state }, idTarea) {
@@ -103,8 +120,8 @@ export default new Vuex.Store({
           });
         })
         .catch((error) => {
-          // console.log(error);
-          commit("setError", error);
+          console.log(error);
+          commit("setError", error.code);
         });
     },
     ingresoUsuario({ commit }, usuario) {
@@ -120,8 +137,8 @@ export default new Vuex.Store({
           router.push("/");
         })
         .catch((error) => {
-          //console.log(error);
-          commit("setError", error);
+          // console.log(error);
+          commit("setError", error.code);
         });
     },
     cerrarSesion({ commit }) {
@@ -140,6 +157,16 @@ export default new Vuex.Store({
       } else {
         return true;
       }
+    },
+    arrayFiltrado(state) {
+      let arrayFiltrado = [];
+      for (let tarea of state.tareas) {
+        let nombre = tarea.nombre.toLowerCase();
+        if (nombre.indexOf(state.texto) >= 0) {
+          arrayFiltrado.push(tarea);
+        }
+      }
+      return arrayFiltrado;
     },
   },
   modules: {},
